@@ -5,6 +5,7 @@ from sqlalchemy import JSON, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from sqlalchemy import DateTime
 
 if TYPE_CHECKING:
     from app.models.tariff import Tariff
@@ -69,6 +70,7 @@ class Payment(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
