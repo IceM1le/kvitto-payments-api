@@ -495,7 +495,7 @@ WEBHOOK_SECRET
 ### PowerShell
 
 ```powershell
-python -c "import json,hmac,hashlib; body=json.dumps({'payment_id':1,'status':'succeeded'}, separators=(',', ':')).encode(); print(hmac.new(b'dev-secret-in-docker', body, hashlib.sha256).hexdigest())"
+python -c "import json,hmac,hashlib; body=json.dumps({'payment_id':1,'status':'succeeded'}, separators=(',', ':')).encode(); print(hmac.new(b'local-development-secret', body, hashlib.sha256).hexdigest())"
 ```
 
 ### Bash

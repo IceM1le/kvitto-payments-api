@@ -15,7 +15,10 @@ def verify_webhook_signature(
         hashlib.sha256,
     ).hexdigest()
 
-    return hmac.compare_digest(
-        expected_signature,
-        signature,
-    )
+    try:
+        return hmac.compare_digest(
+            expected_signature,
+            signature,
+        )
+    except TypeError:
+        return False
