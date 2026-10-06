@@ -1,5 +1,8 @@
 from collections.abc import AsyncGenerator
 
+import hashlib
+import hmac
+import json
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
@@ -130,11 +133,25 @@ async def test_invalid_transition_does_not_change_status(
 
     payment_id = create_response.json()["id"]
 
-    webhook_response = await client.post(
-        "/webhooks/bank",
-        json={
+    body = json.dumps(
+        {
             "payment_id": payment_id,
             "status": "refunded",
+        }
+    ).encode()
+
+    signature = hmac.new(
+        b"test-secret",
+        body,
+        hashlib.sha256,
+    ).hexdigest()
+
+    webhook_response = await client.post(
+        "/webhooks/bank",
+        content=body,
+        headers={
+            "X-Signature": signature,
+            "Content-Type": "application/json",
         },
     )
 
@@ -162,3 +179,109 @@ async def test_get_nonexistent_payment_returns_404(
     )
 
     assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_webhook_valid_signature(
+    client: AsyncClient,
+) -> None:
+    """Проверяет вебхук с корректной подписью."""
+
+    create_response = await client.post(
+        "/payments",
+        json={
+            "tariff_id": 1,
+            "email": "user@example.com",
+            "method": "card",
+        },
+    )
+
+    payment_id = create_response.json()["id"]
+
+    body = json.dumps(
+        {
+            "payment_id": payment_id,
+            "status": "succeeded",
+        }
+    ).encode()
+
+    signature = hmac.new(
+        b"test-secret",
+        body,
+        hashlib.sha256,
+    ).hexdigest()
+
+    response = await client.post(
+        "/webhooks/bank",
+        content=body,
+        headers={
+            "X-Signature": signature,
+            "Content-Type": "application/json",
+        },
+    )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_webhook_invalid_signature(
+    client: AsyncClient,
+) -> None:
+    """Проверяет вебхук с неверной подписью."""
+
+    create_response = await client.post(
+        "/payments",
+        json={
+            "tariff_id": 1,
+            "email": "user@example.com",
+            "method": "card",
+        },
+    )
+
+    payment_id = create_response.json()["id"]
+
+    response = await client.post(
+        "/webhooks/bank",
+        json={
+            "payment_id": payment_id,
+            "status": "succeeded",
+        },
+        headers={
+            "X-Signature": "invalid-signature",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {
+        "error": "invalid_signature",
+    }
+
+
+@pytest.mark.asyncio
+async def test_webhook_missing_signature(
+    client: AsyncClient,
+) -> None:
+    """Проверяет вебхук без подписи."""
+
+    create_response = await client.post(
+        "/payments",
+        json={
+            "tariff_id": 1,
+            "email": "user@example.com",
+            "method": "card",
+        },
+    )
+
+    payment_id = create_response.json()["id"]
+
+    response = await client.post(
+        "/webhooks/bank",
+        json={
+            "payment_id": payment_id,
+            "status": "succeeded",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {
+        "error": "invalid_signature",
+    }
