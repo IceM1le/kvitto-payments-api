@@ -2,6 +2,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.routes.payments import router as payments_router
+from app.api.routes.tariffs import router as tariffs_router
+from app.api.routes.webhooks import router as webhooks_router
 from app.db.base import Base
 from app.db.seed import seed_tariffs
 from app.db.session import AsyncSessionLocal, engine
@@ -35,3 +38,8 @@ app = FastAPI(
 async def health() -> dict[str, str]:
     """Проверка работоспособности сервиса."""
     return {"status": "ok"}
+
+
+app.include_router(tariffs_router)
+app.include_router(payments_router)
+app.include_router(webhooks_router)
