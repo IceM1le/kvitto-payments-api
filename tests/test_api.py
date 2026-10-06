@@ -109,3 +109,56 @@ async def test_idempotency_prevents_duplicate(
         payments_count = result.scalar_one()
 
     assert payments_count == 1
+
+
+@pytest.mark.asyncio
+async def test_invalid_transition_does_not_change_status(
+    client: AsyncClient,
+) -> None:
+    """Проверяет, что запрещённый переход не меняет статус."""
+
+    create_response = await client.post(
+        "/payments",
+        json={
+            "tariff_id": 1,
+            "email": "user@example.com",
+            "method": "card",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    payment_id = create_response.json()["id"]
+
+    webhook_response = await client.post(
+        "/webhooks/bank",
+        json={
+            "payment_id": payment_id,
+            "status": "refunded",
+        },
+    )
+
+    assert webhook_response.status_code == 409
+    assert webhook_response.json() == {
+        "error": "invalid_transition"
+    }
+
+    payment_response = await client.get(
+        f"/payments/{payment_id}"
+    )
+
+    assert payment_response.status_code == 200
+    assert payment_response.json()["status"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_get_nonexistent_payment_returns_404(
+    client: AsyncClient,
+) -> None:
+    """Проверяет получение несуществующего платежа."""
+
+    response = await client.get(
+        "/payments/999999"
+    )
+
+    assert response.status_code == 404

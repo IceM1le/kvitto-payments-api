@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -36,9 +37,11 @@ async def bank_webhook(
         payment.status,
         payload.status,
     ):
-        raise HTTPException(
-            status_code=409,
-            detail="Недопустимый переход статуса.",
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "error": "invalid_transition",
+            },
         )
 
     payment.status = payload.status
@@ -46,4 +49,4 @@ async def bank_webhook(
     await db.commit()
     await db.refresh(payment)
 
-    return {"status": "ok"}
+    return {"result": "ok"}
