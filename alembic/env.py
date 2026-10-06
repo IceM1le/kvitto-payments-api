@@ -1,14 +1,13 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 from app.core.config import settings
 from app.db.base import Base
 
 # Импорт моделей обязателен для регистрации metadata.
 from app.models import Payment, Tariff  # noqa: F401
-
 
 config = context.config
 

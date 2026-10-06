@@ -32,6 +32,24 @@ asyncio_mode = "auto"
 line-length = 100
 target-version = "py311"
 
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "B",
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Header",
+    "fastapi.Body",
+    "fastapi.Path",
+]
+
 [tool.setuptools.packages.find]
 include = ["app*"]
 

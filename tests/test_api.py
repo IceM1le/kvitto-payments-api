@@ -1,8 +1,8 @@
-from collections.abc import AsyncGenerator
-
 import hashlib
 import hmac
 import json
+from collections.abc import AsyncGenerator
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
@@ -16,7 +16,6 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.models import Payment, Tariff
-
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

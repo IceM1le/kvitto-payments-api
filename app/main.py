@@ -5,9 +5,8 @@ from fastapi import FastAPI
 from app.api.routes.payments import router as payments_router
 from app.api.routes.tariffs import router as tariffs_router
 from app.api.routes.webhooks import router as webhooks_router
-from app.db.base import Base
 from app.db.seed import seed_tariffs
-from app.db.session import AsyncSessionLocal, engine
+from app.db.session import AsyncSessionLocal
 
 # Импортируем модели, чтобы они зарегистрировались в metadata.
 from app.models import Payment, Tariff  # noqa: F401

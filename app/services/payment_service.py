@@ -1,6 +1,5 @@
 from typing import Final
 
-
 VALID_INSTALLMENT_MONTHS: Final[set[int]] = {3, 6, 12}
 
 ALLOWED_STATUS_TRANSITIONS: Final[dict[str, set[str]]] = {
