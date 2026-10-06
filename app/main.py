@@ -17,11 +17,6 @@ from app.models import Payment, Tariff  # noqa: F401
 async def lifespan(app: FastAPI):
     """Жизненный цикл приложения."""
 
-    # Создаём таблицы при запуске приложения.
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    # Идемпотентно создаём тарифы по умолчанию.
     async with AsyncSessionLocal() as session:
         await seed_tariffs(session)
 

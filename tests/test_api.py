@@ -32,6 +32,25 @@ TestSessionLocal = async_sessionmaker(
 )
 
 
+async def create_payment(
+    client: AsyncClient,
+    email: str,
+) -> int:
+    """Создаёт тестовый платёж."""
+
+    response = await client.post(
+        "/payments",
+        json={
+            "tariff_id": 1,
+            "email": email,
+            "method": "card",
+        },
+    )
+
+    assert response.status_code == 201
+
+    return response.json()["id"]
+
 async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
     """Возвращает тестовую сессию БД."""
 
@@ -285,3 +304,146 @@ async def test_webhook_missing_signature(
     assert response.json() == {
         "error": "invalid_signature",
     }
+
+@pytest.mark.asyncio
+async def test_get_payments_without_filters(
+    client: AsyncClient,
+) -> None:
+    """Проверяет получение всех платежей."""
+
+    await create_payment(
+        client,
+        "user1@example.com",
+    )
+
+    await create_payment(
+        client,
+        "user2@example.com",
+    )
+
+    response = await client.get(
+        "/payments",
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+@pytest.mark.asyncio
+async def test_get_payments_filter_by_email(
+    client: AsyncClient,
+) -> None:
+    """Проверяет фильтрацию по email."""
+
+    await create_payment(
+        client,
+        "user1@example.com",
+    )
+
+    await create_payment(
+        client,
+        "user2@example.com",
+    )
+
+    response = await client.get(
+        "/payments",
+        params={
+            "email": "user1@example.com",
+        },
+    )
+
+    assert response.status_code == 200
+
+    payments = response.json()
+
+    assert len(payments) == 1
+    assert payments[0]["email"] == "user1@example.com"
+
+@pytest.mark.asyncio
+async def test_get_payments_filter_by_status(
+    client: AsyncClient,
+) -> None:
+    """Проверяет фильтрацию по статусу."""
+
+    first_payment_id = await create_payment(
+        client,
+        "user1@example.com",
+    )
+
+    second_payment_id = await create_payment(
+        client,
+        "user2@example.com",
+    )
+
+    async with TestSessionLocal() as session:
+        payment = await session.get(
+            Payment,
+            first_payment_id,
+        )
+
+        payment.status = "succeeded"
+
+        await session.commit()
+
+    response = await client.get(
+        "/payments",
+        params={
+            "status": "succeeded",
+        },
+    )
+
+    assert response.status_code == 200
+
+    payments = response.json()
+
+    assert len(payments) == 1
+    assert payments[0]["id"] == first_payment_id
+
+    _ = second_payment_id
+
+@pytest.mark.asyncio
+async def test_get_payments_filter_by_email_and_status(
+    client: AsyncClient,
+) -> None:
+    """Проверяет одновременную фильтрацию."""
+
+    target_id = await create_payment(
+        client,
+        "user1@example.com",
+    )
+
+    second_id = await create_payment(
+        client,
+        "user1@example.com",
+    )
+
+    third_id = await create_payment(
+        client,
+        "user2@example.com",
+    )
+
+    async with TestSessionLocal() as session:
+        payment = await session.get(
+            Payment,
+            target_id,
+        )
+
+        payment.status = "succeeded"
+
+        await session.commit()
+
+    response = await client.get(
+        "/payments",
+        params={
+            "email": "user1@example.com",
+            "status": "pending",
+        },
+    )
+
+    assert response.status_code == 200
+
+    payments = response.json()
+
+    assert len(payments) == 1
+    assert payments[0]["id"] == second_id
+
+    _ = third_id

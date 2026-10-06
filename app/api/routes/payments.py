@@ -3,6 +3,7 @@ from fastapi import (
     Depends,
     Header,
     HTTPException,
+    Query,
     Response,
     status,
 )
@@ -139,3 +140,35 @@ async def get_payment(
         )
 
     return payment
+
+@router.get(
+    "",
+    response_model=list[PaymentResponse],
+)
+async def get_payments(
+    email: str | None = Query(None),
+    status_filter: str | None = Query(
+        default=None,
+        alias="status",
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> list[Payment]:
+    """Возвращает список платежей с опциональными фильтрами."""
+
+    query = select(Payment)
+
+    if email is not None:
+        query = query.where(
+            Payment.email == email,
+        )
+
+    if status_filter is not None:
+        query = query.where(
+            Payment.status == status_filter,
+        )
+
+    result = await db.execute(query)
+
+    payments = result.scalars().all()
+
+    return list(payments)
