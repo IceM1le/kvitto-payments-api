@@ -88,3 +88,29 @@ status: Mapped[str] = mapped_column(
 **Как исправил:** Попросил модель добавить проверку `Idempotency-Key` в 
 начале функции `create_payment` и передавать значение ключа в модель при 
 создании. 
+
+### Случай 3 — Неверный формат ответа webhook и ошибки 409
+
+**Что предложила модель:**  
+В эндпоинте `POST /webhooks/bank` возвращала `{"status": "ok"}` при успехе  
+и использовала `HTTPException` для ошибки 409, что давало стандартный  
+FastAPI формат `{"detail": "..."}`.
+
+**Как заметил:**  
+Перечитал ТЗ и увидел явные требования к формату ответов:
+
+- Успех — `{"result": "ok"}`, а не `{"status": "ok"}`.
+- Запрещённый переход — `{"error": "invalid_transition"}`, а не  
+  `{"detail": "..."}`.
+
+**Как исправил:**  
+
+- Изменил успешный ответ на `{"result": "ok"}`.
+- Заменил `HTTPException` на `JSONResponse` с явным форматом:
+
+```python
+return JSONResponse(
+    status_code=409,
+    content={"error": "invalid_transition"},
+)
+```
